@@ -27,7 +27,7 @@ which has all release binaries including X server and clients.
 
 4. How to use DCserv
 
-1) write image to 2GB (or larger) USB flash memory via gzip(1) and dd(1)
+1) write image to 2GB (or larger) USB flash memory via gunzip(1) and dd(1)
    (or Rawrite32.exe tool for Windows),
     Rawrite32.exe tool can be found here:
     http://www.NetBSD.org/~martin/rawrite32/
@@ -45,10 +45,17 @@ which has all release binaries including X server and clients.
 
 5. Misc
 
-20101113a version uses NetBSD 5.1 release binaries.
-Only xinit(1) binary for dreamcast is replaced with patched one
-to workaround "can't quit Xserver" problem.
+20130522 version uses NetBSD 6.1 release binaries.
 
+
+6. Changes
+
+20101113a:
+ - Initial revision
+
+20130522:
+ - Update for NetBSD 6.1.
+ 
 ---
 Izumi Tsutsui
 tsutsui@NetBSD.org
