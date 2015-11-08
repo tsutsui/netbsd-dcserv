@@ -46,6 +46,7 @@ which has all release binaries including X server and clients.
 5. Misc
 
 20130522 version uses NetBSD 6.1 release binaries.
+20151122 version uses NetBSD 7.0 release binaries.
 
 
 6. Changes
@@ -55,6 +56,9 @@ which has all release binaries including X server and clients.
 
 20130522:
  - Update for NetBSD 6.1.
+ 
+20151122:
+ - Update for NetBSD 7.0.
  
 ---
 Izumi Tsutsui

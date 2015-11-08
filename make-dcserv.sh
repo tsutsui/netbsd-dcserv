@@ -1,6 +1,6 @@
 #! /bin/sh
 #
-# Copyright (c) 2009, 2010, 2013 Izumi Tsutsui.  All rights reserved.
+# Copyright (c) 2009, 2010, 2013, 2015 Izumi Tsutsui.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -22,7 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-VERSION=20130522
+VERSION=20151122
 
 #MACHINE=amd64
 MACHINE=i386
@@ -77,7 +77,8 @@ fi
 # tooldir settings
 #
 #NETBSDSRCDIR=/usr/src
-TOOLDIR=/usr/tools/${MACHINE_ARCH}
+#NETBSDSRCDIR=/s/src
+#TOOLDIR=/usr/tools/${MACHINE_ARCH}
 
 if [ -z ${NETBSDSRCDIR} ]; then
 	NETBSDSRCDIR=/usr/src
@@ -97,7 +98,7 @@ fi
 if [ ! -d ${TOOLDIR} ]; then
 	echo 'set TOOLDIR first'; exit 1
 fi
-if [ ! -x ${TOOLDIR}/bin/nbdisklabel-${MACHINE} ]; then
+if [ ! -x ${TOOLDIR}/bin/nbmake-${MACHINE} ]; then
 	echo 'build tools first'; exit 1
 fi
 
@@ -108,7 +109,7 @@ FTPHOST=ftp.NetBSD.org
 #FTPHOST=ftp.jp.NetBSD.org
 #FTPHOST=ftp7.jp.NetBSD.org
 #FTPHOST=nyftp.NetBSD.org
-RELEASE=6.1
+RELEASE=7.0
 RELEASEDIR=pub/NetBSD/NetBSD-${RELEASE}
 #RELEASEDIR=pub/NetBSD-daily/HEAD/201011130000Z
 
@@ -119,7 +120,7 @@ CAT=cat
 CKSUM=cksum
 CP=cp
 DD=dd
-DISKLABEL=${TOOLDIR}/bin/nbdisklabel-${MACHINE}
+DISKLABEL=${TOOLDIR}/bin/nbdisklabel
 FDISK=${TOOLDIR}/bin/${MACHINE_GNU_PLATFORM}-fdisk
 FTP=ftp
 #FTP=lukemftp
@@ -158,7 +159,8 @@ SWAPSECTORS=$((${SWAPMB} * 1024 * 1024 / 512))
 LABELSECTORS=0
 if [ "${USE_MBR}" = "yes" ]; then
 #	LABELSECTORS=63		# historical
-	LABELSECTORS=32		# aligned?
+#	LABELSECTORS=32		# aligned
+	LABELSECTORS=2048	# align 1MiB for modern flash
 fi
 BSDPARTSECTORS=$((${IMAGESECTORS} - ${LABELSECTORS}))
 FSSECTORS=$((${IMAGESECTORS} - ${SWAPSECTORS} - ${LABELSECTORS}))
@@ -170,7 +172,17 @@ SECTORS=32
 CYLINDERS=$((${IMAGESECTORS} / ( ${HEADS} * ${SECTORS} ) ))
 FSCYLINDERS=$((${FSSECTORS} / ( ${HEADS} * ${SECTORS} ) ))
 SWAPCYLINDERS=$((${SWAPSECTORS} / ( ${HEADS} * ${SECTORS} ) ))
-MBRCYLINDERS=$((${IMAGESECTORS} / 255 / 63))
+
+# fdisk(8) parameters
+MBRSECTORS=63
+MBRHEADS=255
+MBRCYLINDERS=$((${IMAGESECTORS} / ( ${MBRHEADS} * ${MBRSECTORS} ) ))
+MBRNETBSD=169
+
+# makefs(8) parameters
+BLOCKSIZE=16384
+FRAGSIZE=2048
+DENSITY=8192
 
 #
 # get binary sets
@@ -178,7 +190,7 @@ MBRCYLINDERS=$((${IMAGESECTORS} / 255 / 63))
 URL_SETS=ftp://${FTPHOST}/${RELEASEDIR}/${MACHINE}/binary/sets
 SETS="${KERN_SET} base etc ${EXTRA_SETS}"
 URL_SETS_DC=ftp://${FTPHOST}/${RELEASEDIR}/dreamcast/binary/sets
-SETS_DC="kern-GENERIC base etc comp games man misc tests text xbase xcomp xetc xfont xserver"
+SETS_DC="kern-GENERIC modules base etc comp games man misc tests text xbase xcomp xetc xfont xserver"
 ${MKDIR} -p ${DOWNLOADDIR}
 for set in ${SETS}; do
 	if [ ! -f ${DOWNLOADDIR}/${set}.tgz ]; then
@@ -264,7 +276,6 @@ rpcbind=YES		rpcbind_flags="-l"	# -l logs libwrap
 mountd=YES		mountd_flags=""		# NFS mount requests daemon
 nfs_client=NO					# enable client daemons
 nfs_server=YES					# enable server daemons
-			nfsd_flags="-6tun 4"
 dhcpd=YES		dhcpd_flags="-q"
 savecore=NO
 cron=NO
@@ -282,7 +293,6 @@ dhclient=NO
 nfs_client=YES
 inetd=YES
 
-fixsb=NO
 savecore=NO
 cron=NO
 postfix=NO
@@ -450,7 +460,7 @@ ${CAT} ${WORKDIR}/spec.${MACHINE} ${WORKDIR}/spec.dreamcast > ${WORKDIR}/spec
 echo Creating rootfs...
 ${TOOLDIR}/bin/nbmakefs -M ${FSSIZE} -B ${TARGET_ENDIAN} \
 	-F ${WORKDIR}/spec -N ${TARGETROOTDIR}/etc \
-	-o bsize=16384,fsize=2048,density=8192 \
+	-o bsize=${BLOCKSIZE},fsize=${FRAGSIZE},density=${DENSITY} \
 	${WORKDIR}/rootfs ${TARGETROOTDIR}
 if [ ! -f ${WORKDIR}/rootfs ]; then
 	echo Failed to create rootfs. Aborted.
@@ -476,8 +486,8 @@ fi
 if [ ${LABELSECTORS} != 0 ]; then
 	echo creating MBR labels...
 	${FDISK} -f -u \
-	    -b ${MBRCYLINDERS}/255/63 \
-	    -0 -a -s 169/${FSOFFSET}/${BSDPARTSECTORS} \
+	    -b ${MBRCYLINDERS}/${MBRHEADS}/${MBRSECTORS} \
+	    -0 -a -s ${MBRNETBSD}/${FSOFFSET}/${BSDPARTSECTORS} \
 	    -i -c ${TARGETROOTDIR}/usr/mdec/mbr \
 	    -F ${IMAGE}
 fi
@@ -504,13 +514,13 @@ drivedata: 0
 
 8 partitions:
 #        size    offset     fstype [fsize bsize cpg/sgs]
-a:    ${FSSECTORS} ${FSOFFSET} 4.2BSD 1024 8192 16
+a:    ${FSSECTORS} ${FSOFFSET} 4.2BSD ${FRAGSIZE} ${BLOCKSIZE} 128
 b:    ${SWAPSECTORS} ${SWAPOFFSET} swap
 c:    ${BSDPARTSECTORS} ${FSOFFSET} unused 0 0
 d:    ${IMAGESECTORS} 0 unused 0 0
 EOF
 
-${DISKLABEL} -R -F ${IMAGE} ${WORKDIR}/labelproto
+${DISKLABEL} -R -M ${MACHINE} -F ${IMAGE} ${WORKDIR}/labelproto
 
 echo Creating gzipped image...
 ${GZIP} -9c ${WORKDIR}/${MACHINE}.img > ${WORKDIR}/dcserv-${VERSION}.img.gz.tmp
