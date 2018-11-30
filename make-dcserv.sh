@@ -1,6 +1,7 @@
 #! /bin/sh
 #
-# Copyright (c) 2009, 2010, 2013, 2015 Izumi Tsutsui.  All rights reserved.
+# Copyright (c) 2009, 2010, 2013, 2015, 2018 Izumi Tsutsui.
+# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -22,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-VERSION=20151122
+VERSION=20181130
 
 #MACHINE=amd64
 MACHINE=i386
@@ -105,11 +106,12 @@ fi
 #
 # info about ftp to get binary sets
 #
-FTPHOST=ftp.NetBSD.org
+FTPHOST=cdn.NetBSD.org
+#FTPHOST=ftp.NetBSD.org
 #FTPHOST=ftp.jp.NetBSD.org
 #FTPHOST=ftp7.jp.NetBSD.org
 #FTPHOST=nyftp.NetBSD.org
-RELEASE=7.0
+RELEASE=8.0
 RELEASEDIR=pub/NetBSD/NetBSD-${RELEASE}
 #RELEASEDIR=pub/NetBSD-daily/HEAD/201011130000Z
 
@@ -187,9 +189,9 @@ DENSITY=8192
 #
 # get binary sets
 #
-URL_SETS=ftp://${FTPHOST}/${RELEASEDIR}/${MACHINE}/binary/sets
+URL_SETS=http://${FTPHOST}/${RELEASEDIR}/${MACHINE}/binary/sets
 SETS="${KERN_SET} base etc ${EXTRA_SETS}"
-URL_SETS_DC=ftp://${FTPHOST}/${RELEASEDIR}/dreamcast/binary/sets
+URL_SETS_DC=http://${FTPHOST}/${RELEASEDIR}/dreamcast/binary/sets
 SETS_DC="kern-GENERIC modules base etc comp games man misc tests text xbase xcomp xetc xfont xserver"
 ${MKDIR} -p ${DOWNLOADDIR}
 for set in ${SETS}; do
@@ -257,7 +259,7 @@ ${CP} ${WORKDIR}/fstab  ${TARGETROOTDIR}/etc
 
 echo Preparing ${NFSROOT}/etc/fstab...
 ${CAT} > ${WORKDIR}/${NFSROOT}/fstab <<EOF
-10.0.0.254:/nfsroot	/		nfs	rw		0 0
+10.0.0.254:/nfsroot	/		nfs	rw,-r=1024,-w=1024 0 0
 /swap			none		none	sw		0 0
 swap			/tmp		tmpfs	rw,-s=16M	0 0
 ptyfs			/dev/pts	ptyfs	rw		0 0
@@ -366,6 +368,10 @@ for i in \`/sbin/ifconfig -l\`; do
 		;;
 
 		fwip*)
+		;;
+
+		an*|ath*|atu*|atw*|bwfm*|otus*|ral*rum*|rtw*|run*|upgt*|ural*|urtw*|wi*|zyd*)
+		# ignore 801.11 wireless adapters
 		;;
 
 		*)

@@ -42,11 +42,15 @@ which has all release binaries including X server and clients.
 6) type enter on following prompts (dump device, file system, init path)
 7) have fun
 
+Note: NetBSD 8.0 version has a bug that dhcpd(8) doesn't start as a daemon
+on startup. In that case login as root and start /usr/sbin/dhcpd manually.
+
 
 5. Misc
 
 20130522 version uses NetBSD 6.1 release binaries.
 20151122 version uses NetBSD 7.0 release binaries.
+20181130 version uses NetBSD 8.0 release binaries.
 
 
 6. Changes
@@ -59,6 +63,9 @@ which has all release binaries including X server and clients.
  
 20151122:
  - Update for NetBSD 7.0.
+ 
+20181130:
+ - Update for NetBSD 8.0.
  
 ---
 Izumi Tsutsui
